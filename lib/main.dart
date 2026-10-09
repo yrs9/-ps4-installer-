@@ -37,12 +37,10 @@ class _SenderHomePageState extends State<SenderHomePage> {
   bool _isLoading = false;
   String _statusMessage = "";
 
-  // دالة لطلب الإذن أولاً ثم فتح مستعرض الملفات
+  // دالة لطلب الإذن من المستخدم ثم فتح مستعرض الملفات
   Future<void> _requestPermissionAndPickFile() async {
-    // طلب إذن التخزين
     var status = await Permission.storage.request();
     
-    // للأجهزة الحديثة (Android 11+) قد نحتاج التحقق من الإذونات العامة
     if (!status.isGranted) {
       status = await Permission.manageExternalStorage.request();
     }
@@ -51,12 +49,12 @@ class _SenderHomePageState extends State<SenderHomePage> {
       _pickFile();
     } else {
       setState(() {
-        _statusMessage = "تم رفض إذن الوصول إلى الملفات! يرجى منحه من إعدادات التطبيق.";
+        _statusMessage = "تم رفض إذن الوصول إلى الملفات! يرجى منحه من إعدادات الهاتف.";
       });
     }
   }
 
-  // دالة فتح مستعرض ملفات الجهاز
+  // دالة اختيار ملف اللعبة
   Future<void> _pickFile() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -72,7 +70,7 @@ class _SenderHomePageState extends State<SenderHomePage> {
     }
   }
 
-  // دالة إرسال رابط اللعبة إلى PS4 API
+  // دالة إرسال اللعبة إلى الـ PS4 API
   Future<void> _sendToPS4() async {
     String ps4Ip = _ipController.text.trim();
     String pkgUrl = _pathController.text.trim();
@@ -86,7 +84,7 @@ class _SenderHomePageState extends State<SenderHomePage> {
 
     setState(() {
       _isLoading = true;
-      _statusMessage = "جاري الاتصال بـ PS4...";
+      _statusMessage = "جاري الاتصال بجهاز PS4...";
     });
 
     try {
@@ -104,7 +102,7 @@ class _SenderHomePageState extends State<SenderHomePage> {
 
       if (response.statusCode == 200) {
         setState(() {
-          _statusMessage = "تم إرسال اللعبة بنجاح إلى PS4! تحقق من جهازك.";
+          _statusMessage = "تم إرسال اللعبة بنجاح إلى PS4! تحقق من ظهورها على جهازك.";
         });
       } else {
         setState(() {
@@ -113,7 +111,7 @@ class _SenderHomePageState extends State<SenderHomePage> {
       }
     } catch (e) {
       setState(() {
-        _statusMessage = "خطأ في الاتصال: $e";
+        _statusMessage = "خطأ في الاتصال: تأكد من صحة الـ IP واتصال الشبكة ($e)";
       });
     } finally {
       setState(() {
@@ -145,7 +143,7 @@ class _SenderHomePageState extends State<SenderHomePage> {
               ),
               const SizedBox(height: 20),
 
-              // زر اختيار الملف (يطلب الإذن عند الضغط عليه)
+              // زر طلب الإذن واختيار الملف
               ElevatedButton.icon(
                 onPressed: _requestPermissionAndPickFile,
                 icon: const Icon(Icons.folder_open),
@@ -156,18 +154,18 @@ class _SenderHomePageState extends State<SenderHomePage> {
               ),
               const SizedBox(height: 15),
               
-              const Text('مسار ملف الـ PKG:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('مسار ملف الـ PKG المحدد:', style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 5),
-              
               TextField(
                 controller: _pathController,
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
-                  hintText: 'مسار الملف المحدد سيظهر هنا',
+                  hintText: 'سيظهر مسار الملف هنا تلقائياً',
                 ),
               ),
               const SizedBox(height: 30),
 
+              // زر الإرسال للـ PS4
               ElevatedButton(
                 onPressed: _isLoading ? null : _sendToPS4,
                 style: ElevatedButton.styleFrom(
