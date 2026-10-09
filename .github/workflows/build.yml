@@ -33,3 +33,4 @@ jobs:
       with:
         name: PS4-Installer-APK
         path: build/app/outputs/flutter-apk/app-release.apk
+# trigger build
