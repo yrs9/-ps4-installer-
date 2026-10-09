@@ -22,9 +22,8 @@ jobs:
       with:
         flutter-version: '3.19.x'
 
-    - name: Create Clean Project & Build APK
+    - name: Build APK
       run: |
-        flutter create . --org com.ps4.installer --project-name ps4_installer --platforms android --overwrite
         flutter build apk --release --no-tree-shake-icons
 
     - name: Upload APK Artifact
