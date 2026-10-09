@@ -179,4 +179,98 @@ class _InstallerHomePageState extends State<InstallerHomePage> {
     );
   }
 }
+import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'PS4 Package Sender',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: const SenderHomePage(),
+    );
+  }
+}
+
+class SenderHomePage extends StatefulWidget {
+  const SenderHomePage({super.key});
+
+  @override
+  State<SenderHomePage> createState() => _SenderHomePageState();
+}
+
+class _SenderHomePageState extends State<SenderHomePage> {
+  String? _selectedFilePath;
+  final TextEditingController _pathController = TextEditingController();
+
+  // دالة فتح مستعرض ملفات الجهاز
+  Future<void> _pickFile() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pkg'], // تحديد نوع الملفات المسموحة
+    );
+
+    if (result != null && result.files.single.path != null) {
+      setState(() {
+        _selectedFilePath = result.files.single.path;
+        _pathController.text = _selectedFilePath!;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('مرسل ألعاب PS4'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // زر فتح مستعرض الملفات
+            ElevatedButton.icon(
+              onPressed: _pickFile,
+              icon: const Icon(Icons.folder_open),
+              label: const Text('اختر ملف اللعبة من الجهاز'),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 50),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text('أو أضف مسار الملف يدوياً:', style: TextStyle(fontSize: 16)),
+            const SizedBox(height: 10),
+            
+            // حقل إدخال المسار يدوياً
+            TextField(
+              controller: _pathController,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                hintText: '/sdcard/Download/game.pkg',
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // عرض المسار المحدد حالياً
+            if (_selectedFilePath != null)
+              Text(
+                'الملف المحدد:\n$_selectedFilePath',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
