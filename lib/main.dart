@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -36,6 +37,25 @@ class _SenderHomePageState extends State<SenderHomePage> {
   bool _isLoading = false;
   String _statusMessage = "";
 
+  // دالة لطلب الإذن أولاً ثم فتح مستعرض الملفات
+  Future<void> _requestPermissionAndPickFile() async {
+    // طلب إذن التخزين
+    var status = await Permission.storage.request();
+    
+    // للأجهزة الحديثة (Android 11+) قد نحتاج التحقق من الإذونات العامة
+    if (!status.isGranted) {
+      status = await Permission.manageExternalStorage.request();
+    }
+
+    if (await Permission.storage.isGranted || await Permission.manageExternalStorage.isGranted || status.isGranted) {
+      _pickFile();
+    } else {
+      setState(() {
+        _statusMessage = "تم رفض إذن الوصول إلى الملفات! يرجى منحه من إعدادات التطبيق.";
+      });
+    }
+  }
+
   // دالة فتح مستعرض ملفات الجهاز
   Future<void> _pickFile() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -47,6 +67,7 @@ class _SenderHomePageState extends State<SenderHomePage> {
       setState(() {
         _selectedFilePath = result.files.single.path;
         _pathController.text = _selectedFilePath!;
+        _statusMessage = "تم اختيار الملف بنجاح.";
       });
     }
   }
@@ -54,11 +75,11 @@ class _SenderHomePageState extends State<SenderHomePage> {
   // دالة إرسال رابط اللعبة إلى PS4 API
   Future<void> _sendToPS4() async {
     String ps4Ip = _ipController.text.trim();
-    String pkgUrl = _pathController.text.trim(); // ملاحظة: يحتاج PS4 رابط HTTP حقيقي، سنوضح نقطة السيرفر لاحقاً
+    String pkgUrl = _pathController.text.trim();
 
     if (ps4Ip.isEmpty || pkgUrl.isEmpty) {
       setState(() {
-        _statusMessage = "الرجاء التأكد من إدخال IP الـ PS4 ومسار أو رابط اللعبة!";
+        _statusMessage = "الرجاء التأكد من إدخال IP الـ PS4 ومسار اللعبة!";
       });
       return;
     }
@@ -113,7 +134,6 @@ class _SenderHomePageState extends State<SenderHomePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // حقل إدخال آي بي الـ PS4
               const Text('عنوان آي بي جهاز PS4:', style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 5),
               TextField(
@@ -125,9 +145,9 @@ class _SenderHomePageState extends State<SenderHomePage> {
               ),
               const SizedBox(height: 20),
 
-              // زر فتح مستعرض الملفات
+              // زر اختيار الملف (يطلب الإذن عند الضغط عليه)
               ElevatedButton.icon(
-                onPressed: _pickFile,
+                onPressed: _requestPermissionAndPickFile,
                 icon: const Icon(Icons.folder_open),
                 label: const Text('اختر ملف اللعبة من الجهاز'),
                 style: ElevatedButton.styleFrom(
@@ -136,20 +156,18 @@ class _SenderHomePageState extends State<SenderHomePage> {
               ),
               const SizedBox(height: 15),
               
-              const Text('أو مسار/رابط ملف الـ PKG:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('مسار ملف الـ PKG:', style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 5),
               
-              // حقل إدخال المسار
               TextField(
                 controller: _pathController,
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
-                  hintText: 'http://... أو مسار الملف',
+                  hintText: 'مسار الملف المحدد سيظهر هنا',
                 ),
               ),
               const SizedBox(height: 30),
 
-              // زر الإرسال الرئيسي
               ElevatedButton(
                 onPressed: _isLoading ? null : _sendToPS4,
                 style: ElevatedButton.styleFrom(
@@ -163,7 +181,6 @@ class _SenderHomePageState extends State<SenderHomePage> {
               ),
               const SizedBox(height: 20),
 
-              // عرض رسالة الحالة
               if (_statusMessage.isNotEmpty)
                 Container(
                   padding: const EdgeInsets.all(12),
