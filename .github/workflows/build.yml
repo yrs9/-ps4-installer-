@@ -28,9 +28,6 @@ jobs:
       - name: Get Flutter dependencies
         run: flutter pub get
 
-      - name: Create Android Platform
-        run: flutter create . --platforms=android --org com.ps4
-
       - name: Build APK
         run: flutter build apk --release
 
