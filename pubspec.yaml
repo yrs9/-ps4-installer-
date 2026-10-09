@@ -18,7 +18,11 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-dependencies:
+  dependencies:
+  flutter:
+    sdk: flutter
+  file_picker: ^8.0.0
+  http: ^1.2.0
   flutter:
     sdk: flutter
   file_picker: ^8.0.0  # أو أحدث نسخة
