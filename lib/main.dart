@@ -122,7 +122,6 @@ class _InstallerScreenState extends State<InstallerScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // الشعار والنص تماماً مثل الصورة المطلوبة
               const Text(
                 'PS4 PKG Installer',
                 style: TextStyle(
@@ -138,8 +137,6 @@ class _InstallerScreenState extends State<InstallerScreen> {
                 color: Colors.deepPurpleAccent,
               ),
               const SizedBox(height: 40),
-
-              // حقل إدخال الآي بي
               TextField(
                 controller: _ipController,
                 decoration: const InputDecoration(
@@ -149,8 +146,6 @@ class _InstallerScreenState extends State<InstallerScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-
-              // زر اختيار الملف المحلي
               ElevatedButton.icon(
                 onPressed: _pickFileDirectly,
                 icon: const Icon(Icons.folder_open),
@@ -160,5 +155,16 @@ class _InstallerScreenState extends State<InstallerScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-
-              // زر التثبيت والإرس
+              ElevatedButton.icon(
+                onPressed: _isUploading ? null : _sendPkgToPS4,
+                icon: const Icon(Icons.send),
+                label: _isUploading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text("تثبيت على البلايستيشن"),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(50),
+                  backgroundColor: Colors.deepPurple,
+                ),
+              ),
+              const SizedBox(height: 30),
+              Text(
