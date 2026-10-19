@@ -73,7 +73,7 @@ class _InstallerScreenState extends State<InstallerScreen> {
 
     setState(() {
       _isUploading = true;
-      _statusMessage = "جاري الاتصال بالبلايستيشن وبث الملف...";
+      _statusMessage = "جاري الاتصال بالبلايستيشن وبث اللعبة...";
     });
 
     try {
@@ -93,13 +93,13 @@ class _InstallerScreenState extends State<InstallerScreen> {
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 204) {
         setState(() {
-          _statusMessage = "تم إرسال اللعبة بنجاح إلى البلايستيشن!";
+          _statusMessage = "تم إرسال اللعبة بنجاح! تفقد شاشة الـ PS4";
         });
       } else {
         setState(() {
-          _statusMessage = "خطأ في الاستجابة من البلايستيشن (${response.statusCode})";
+          _statusMessage = "خطأ من البلايستيشن (كود: ${response.statusCode})";
         });
       }
     } catch (e) {
