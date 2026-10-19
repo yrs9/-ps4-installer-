@@ -4,7 +4,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
-        android:label="PS4 Installer"
+        android:label="Installing PS4 games"
         android:name="${applicationName}"
         android:icon="@android:drawable/ic_menu_compass">
         
