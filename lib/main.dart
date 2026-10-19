@@ -1,6 +1,6 @@
-import 'package:flutter/material.json'; // أو مكتباتك المستخدمة
+import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:http/http.json' as http;
+import 'package:http/http.dart' as http;
 import 'dart:io';
 
 void main() {
@@ -35,7 +35,6 @@ class _InstallerScreenState extends State<InstallerScreen> {
   bool _isUploading = false;
   String _statusMessage = "";
 
-  // دالة اختيار الملف المحلي من الهاتف
   Future<void> _pickLocalFile() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -51,7 +50,6 @@ class _InstallerScreenState extends State<InstallerScreen> {
     }
   }
 
-  // دالة إرسال الملف محلياً للبلايستيشن عبر بايلود ريموت باكدج إستالر
   Future<void> _sendPkgToPS4() async {
     if (_selectedFilePath == null) {
       setState(() {
@@ -75,13 +73,10 @@ class _InstallerScreenState extends State<InstallerScreen> {
 
     try {
       File file = File(_selectedFilePath!);
-      int fileSize = await file.length();
 
-      // الاتصال ببورت التثبيت على البلايستيشن (عادة 12800)
       var uri = Uri.parse("http://$ps4Ip:12800/api/install");
       var request = http.MultipartRequest('POST', uri);
       
-      // إرسال الملف كـ Stream لكي لا يستهلك ذاكرة الهاتف العشوائية
       request.files.add(
         await http.MultipartFile.fromPath(
           'package',
@@ -95,16 +90,16 @@ class _InstallerScreenState extends State<InstallerScreen> {
 
       if (response.statusCode == 200) {
         setState(() {
-          _statusMessage = "تم إرسال اللعبة بنجاح إلى البلايستيشن! تابع التثبيت على الشاشة.";
+          _statusMessage = "تم إرسال اللعبة بنجاح إلى البلايستيشن!";
         });
       } else {
         setState(() {
-          _statusMessage = "خطأ في الاستجابة من البلايستيشن (Code: ${response.statusCode})";
+          _statusMessage = "خطأ في الاستجابة من البلايستيشن (${response.statusCode})";
         });
       }
     } catch (e) {
       setState(() {
-        _statusMessage = "فشل الاتصال: تأكد من تشغيل GoldHEN وبورت 12800";
+        _statusMessage = "فشل الاتصال: تأكد من تشغيل GoldHEN";
       });
     } finally {
       setState(() {
@@ -125,7 +120,6 @@ class _InstallerScreenState extends State<InstallerScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // حقل إدخال الآي بي الخاص بالـ PS4
             TextField(
               controller: _ipController,
               decoration: const InputDecoration(
@@ -135,8 +129,6 @@ class _InstallerScreenState extends State<InstallerScreen> {
               ),
             ),
             const SizedBox(height: 20),
-
-            // زر اختيار ملف الـ PKG محلياً
             ElevatedButton.icon(
               onPressed: _pickLocalFile,
               icon: const Icon(Icons.folder_open),
@@ -146,22 +138,18 @@ class _InstallerScreenState extends State<InstallerScreen> {
               ),
             ),
             const SizedBox(height: 20),
-
-            // زر التثبيت والإرسال الرئيسي
             ElevatedButton.icon(
               onPressed: _isUploading ? null : _sendPkgToPS4,
               icon: const Icon(Icons.send),
               label: _isUploading
-                  .const ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text("تثبيت على البلايستيشن (Install on PS4)"),
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text("تثبيت على البلايستيشن"),
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size.fromHeight(50),
                 backgroundColor: Colors.deepPurple,
               ),
             ),
             const SizedBox(height: 30),
-
-            // شاشة عرض الحالة أو الأخطاء
             Text(
               _statusMessage,
               textAlign: TextAlign.center,
