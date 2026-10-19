@@ -1,11 +1,9 @@
-import 'dart:convert';
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:flutter/material.json'; // أو مكتباتك المستخدمة
 import 'package:file_picker/file_picker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.json' as http;
+import 'dart:io';
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
@@ -15,127 +13,102 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'PS4 PKG Installer',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        primarySwatch: Colors.deepPurple,
-        useMaterial3: true,
-      ),
-      home: const HomeScreen(),
+      title: 'PS4 Local PKG Installer',
+      theme: ThemeData.dark(),
+      home: const InstallerScreen(),
     );
   }
 }
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+class InstallerScreen extends StatefulWidget {
+  const InstallerScreen({Key? key}) : super(key: key);
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  _InstallerScreenState createState() => _InstallerScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  final TextEditingController _ipController = TextEditingController();
-  final TextEditingController _urlController = TextEditingController();
-  
+class _InstallerScreenState extends State<InstallerScreen> {
+  final TextEditingController _ipController = TextEditingController(text: "192.168.0.131");
+  String? _selectedFilePath;
   String? _selectedFileName;
-  bool _isLoading = false;
-  String _statusMessage = "Ready to send to PS4";
+  bool _isUploading = false;
+  String _statusMessage = "";
 
-  @override
-  void initState() {
-    super.initState();
-    _loadSavedIp();
-  }
-
-  Future<void> _loadSavedIp() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _ipController.text = prefs.getString('ps4_ip') ?? '';
-    });
-  }
-
-  Future<void> _saveIp(String ip) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('ps4_ip', ip);
-  }
-
-  Future<void> _pickFile() async {
+  // دالة اختيار الملف المحلي من الهاتف
+  Future<void> _pickLocalFile() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.any,
+      type: FileType.custom,
+      allowedExtensions: ['pkg'],
     );
 
-    if (result != null && result.files.single.name.endsWith('.pkg')) {
+    if (result != null && result.files.single.path != null) {
       setState(() {
+        _selectedFilePath = result.files.single.path;
         _selectedFileName = result.files.single.name;
-        _statusMessage = "Selected file: $_selectedFileName";
-      });
-    } else if (result != null) {
-      setState(() {
-        _statusMessage = "Please select a .pkg file only";
+        _statusMessage = "تم اختيار الملف: $_selectedFileName";
       });
     }
   }
 
-  Future<void> _sendToPS4() async {
-    final ip = _ipController.text.trim();
-    final url = _urlController.text.trim();
-
-    if (ip.isEmpty) {
+  // دالة إرسال الملف محلياً للبلايستيشن عبر بايلود ريموت باكدج إستالر
+  Future<void> _sendPkgToPS4() async {
+    if (_selectedFilePath == null) {
       setState(() {
-        _statusMessage = "Error: Please enter PS4 IP address";
+        _statusMessage = "الرجاء اختيار ملف PKG أولاً!";
       });
       return;
     }
 
-    if (url.isEmpty) {
+    String ps4Ip = _ipController.text.trim();
+    if (ps4Ip.isEmpty) {
       setState(() {
-        _statusMessage = "Error: Please enter direct PKG URL";
+        _statusMessage = "الرجاء إدخال آي بي البلايستيشن!";
       });
       return;
     }
-
-    await _saveIp(ip);
 
     setState(() {
-      _isLoading = true;
-      _statusMessage = "Sending installation command to PS4...";
+      _isUploading = true;
+      _statusMessage = "جاري الاتصال بالبلايستيشن وبث الملف...";
     });
 
     try {
-      final endpoint = Uri.parse('http://$ip:12800/api/install');
-      final response = await http.post(
-        endpoint,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'type': 'direct',
-          'packages': [url],
-        }),
-      ).timeout(const Duration(seconds: 10));
+      File file = File(_selectedFilePath!);
+      int fileSize = await file.length();
+
+      // الاتصال ببورت التثبيت على البلايستيشن (عادة 12800)
+      var uri = Uri.parse("http://$ps4Ip:12800/api/install");
+      var request = http.MultipartRequest('POST', uri);
+      
+      // إرسال الملف كـ Stream لكي لا يستهلك ذاكرة الهاتف العشوائية
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'package',
+          file.path,
+          filename: _selectedFileName,
+        ),
+      );
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
-        final resData = jsonDecode(response.body);
-        if (resData['status'] == 'success') {
-          setState(() {
-            _statusMessage = "Installation command sent successfully!";
-          });
-        } else {
-          setState(() {
-            _statusMessage = "Failed: ${resData['status'] ?? 'Unknown error'}";
-          });
-        }
+        setState(() {
+          _statusMessage = "تم إرسال اللعبة بنجاح إلى البلايستيشن! تابع التثبيت على الشاشة.";
+        });
       } else {
         setState(() {
-          _statusMessage = "PS4 Error (Code: ${response.statusCode})";
+          _statusMessage = "خطأ في الاستجابة من البلايستيشن (Code: ${response.statusCode})";
         });
       }
     } catch (e) {
       setState(() {
-        _statusMessage = "Connection failed. Check GoldHEN and IP";
+        _statusMessage = "فشل الاتصال: تأكد من تشغيل GoldHEN وبورت 12800";
       });
     } finally {
       setState(() {
-        _isLoading = false;
+        _isUploading = false;
       });
     }
   }
@@ -144,75 +117,55 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('PS4 PKG Installer'),
+        title: const Text('PS4 Local PKG Installer'),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.sports_esports,
-              size: 80,
-              color: Colors.deepPurpleAccent,
-            ),
-            const SizedBox(height: 20),
+            // حقل إدخال الآي بي الخاص بالـ PS4
             TextField(
               controller: _ipController,
-              keyboardType: TextInputType.number,
               decoration: const InputDecoration(
                 labelText: 'PS4 IP Address',
-                hintText: 'e.g., 192.168.1.50',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.wifi),
               ),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _urlController,
-              keyboardType: TextInputType.url,
-              decoration: const InputDecoration(
-                labelText: 'Direct PKG URL',
-                hintText: 'http://example.com/game.pkg',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.link),
-              ),
-            ),
-            const SizedBox(height: 16),
-            OutlinedButton.icon(
-              onPressed: _pickFile,
+            const SizedBox(height: 20),
+
+            // زر اختيار ملف الـ PKG محلياً
+            ElevatedButton.icon(
+              onPressed: _pickLocalFile,
               icon: const Icon(Icons.folder_open),
-              label: Text(_selectedFileName ?? 'Select Local PKG (Optional)'),
+              label: Text(_selectedFileName ?? "اختر ملف PKG من الهاتف"),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size.fromHeight(50),
+              ),
             ),
-            const SizedBox(height: 24),
-            _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : ElevatedButton.icon(
-                    onPressed: _sendToPS4,
-                    icon: const Icon(Icons.send),
-                    label: const Text(
-                      'Install on PS4',
-                      style: TextStyle(fontSize: 18),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepPurple,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                  ),
+            const SizedBox(height: 20),
+
+            // زر التثبيت والإرسال الرئيسي
+            ElevatedButton.icon(
+              onPressed: _isUploading ? null : _sendPkgToPS4,
+              icon: const Icon(Icons.send),
+              label: _isUploading
+                  .const ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text("تثبيت على البلايستيشن (Install on PS4)"),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size.fromHeight(50),
+                backgroundColor: Colors.deepPurple,
+              ),
+            ),
             const SizedBox(height: 30),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.black45,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                _statusMessage,
-                style: const TextStyle(fontSize: 15),
-                textAlign: TextAlign.center,
-              ),
+
+            // شاشة عرض الحالة أو الأخطاء
+            Text(
+              _statusMessage,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16, color: Colors.amber),
             ),
           ],
         ),
