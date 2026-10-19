@@ -168,3 +168,14 @@ class _InstallerScreenState extends State<InstallerScreen> {
               ),
               const SizedBox(height: 30),
               Text(
+                _statusMessage,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16, color: Colors.amber),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
