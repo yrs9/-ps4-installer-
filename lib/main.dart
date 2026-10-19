@@ -14,7 +14,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'PS4 Local PKG Installer',
+      title: 'PS4 PKG Installer',
       theme: ThemeData.dark(),
       home: const InstallerScreen(),
     );
@@ -35,17 +35,22 @@ class _InstallerScreenState extends State<InstallerScreen> {
   bool _isUploading = false;
   String _statusMessage = "";
 
-  Future<void> _pickLocalFile() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['pkg'],
-    );
+  Future<void> _pickFileDirectly() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.any,
+      );
 
-    if (result != null && result.files.single.path != null) {
+      if (result != null && result.files.single.path != null) {
+        setState(() {
+          _selectedFilePath = result.files.single.path;
+          _selectedFileName = result.files.single.name;
+          _statusMessage = "تم اختيار الملف: $_selectedFileName";
+        });
+      }
+    } catch (e) {
       setState(() {
-        _selectedFilePath = result.files.single.path;
-        _selectedFileName = result.files.single.name;
-        _statusMessage = "تم اختيار الملف: $_selectedFileName";
+        _statusMessage = "حدث خطأ أثناء اختيار الملف: $e";
       });
     }
   }
@@ -99,7 +104,7 @@ class _InstallerScreenState extends State<InstallerScreen> {
       }
     } catch (e) {
       setState(() {
-        _statusMessage = "فشل الاتصال: تأكد من تشغيل GoldHEN";
+        _statusMessage = "فشل الاتصال: تأكد من تشغيل GoldHEN وبورت 12800";
       });
     } finally {
       setState(() {
@@ -111,53 +116,49 @@ class _InstallerScreenState extends State<InstallerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('PS4 Local PKG Installer'),
-        centerTitle: true,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TextField(
-              controller: _ipController,
-              decoration: const InputDecoration(
-                labelText: 'PS4 IP Address',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.wifi),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // الشعار والنص تماماً مثل الصورة المطلوبة
+              const Text(
+                'PS4 PKG Installer',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: _pickLocalFile,
-              icon: const Icon(Icons.folder_open),
-              label: Text(_selectedFileName ?? "اختر ملف PKG من الهاتف"),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(50),
+              const SizedBox(height: 20),
+              const Icon(
+                Icons.sports_esports,
+                size: 80,
+                color: Colors.deepPurpleAccent,
               ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: _isUploading ? null : _sendPkgToPS4,
-              icon: const Icon(Icons.send),
-              label: _isUploading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text("تثبيت على البلايستيشن"),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(50),
-                backgroundColor: Colors.deepPurple,
+              const SizedBox(height: 40),
+
+              // حقل إدخال الآي بي
+              TextField(
+                controller: _ipController,
+                decoration: const InputDecoration(
+                  labelText: 'PS4 IP Address',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.wifi),
+                ),
               ),
-            ),
-            const SizedBox(height: 30),
-            Text(
-              _statusMessage,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16, color: Colors.amber),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+              const SizedBox(height: 20),
+
+              // زر اختيار الملف المحلي
+              ElevatedButton.icon(
+                onPressed: _pickFileDirectly,
+                icon: const Icon(Icons.folder_open),
+                label: Text(_selectedFileName ?? "من الهاتف اختر ملف"),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(50),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // زر التثبيت والإرس
