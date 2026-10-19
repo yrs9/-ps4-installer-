@@ -40,7 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
   
   String? _selectedFileName;
   bool _isLoading = false;
-  String _statusMessage = "جاهز للإرسال إلى الـ PS4";
+  String _statusMessage = "Ready to send to PS4";
 
   @override
   void initState() {
@@ -68,11 +68,11 @@ class _HomeScreenState extends State<HomeScreen> {
     if (result != null && result.files.single.name.endsWith('.pkg')) {
       setState(() {
         _selectedFileName = result.files.single.name;
-        _statusMessage = "تم اختيار الملف: $_selectedFileName";
+        _statusMessage = "Selected file: $_selectedFileName";
       });
     } else if (result != null) {
       setState(() {
-        _statusMessage = "تنبيه: يرجى اختيار ملف بصيغة .pkg فقط";
+        _statusMessage = "Please select a .pkg file only";
       });
     }
   }
@@ -83,14 +83,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (ip.isEmpty) {
       setState(() {
-        _statusMessage = "خطأ: يرجى إدخال عنوان IP الخاص بالـ PS4";
+        _statusMessage = "Error: Please enter PS4 IP address";
       });
       return;
     }
 
     if (url.isEmpty) {
       setState(() {
-        _statusMessage = "خطأ: يرجى إدخال رابط ملف الـ PKG المباشر";
+        _statusMessage = "Error: Please enter direct PKG URL";
       });
       return;
     }
@@ -99,7 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     setState(() {
       _isLoading = true;
-      _statusMessage = "جاري إرسال أمر التثبيت إلى الـ PS4...";
+      _statusMessage = "Sending installation command to PS4...";
     });
 
     try {
@@ -117,13 +117,106 @@ class _HomeScreenState extends State<HomeScreen> {
         final resData = jsonDecode(response.body);
         if (resData['status'] == 'success') {
           setState(() {
-            _statusMessage = "تم إرسال أمر التثبيت بنجاح إلى البلايستيشن!";
+            _statusMessage = "Installation command sent successfully!";
           });
         } else {
           setState(() {
-            _statusMessage = "فشل التثبيت: ${resData['status'] ?? 'خطأ غير معروف'}";
+            _statusMessage = "Failed: ${resData['status'] ?? 'Unknown error'}";
           });
         }
       } else {
         setState(() {
-          _statusMessage = "خطأ من ال
+          _statusMessage = "PS4 Error (Code: ${response.statusCode})";
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _statusMessage = "Connection failed. Check GoldHEN and IP";
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('PS4 PKG Installer'),
+        centerTitle: true,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Icon(
+              Icons.sports_esports,
+              size: 80,
+              color: Colors.deepPurpleAccent,
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _ipController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'PS4 IP Address',
+                hintText: 'e.g., 192.168.1.50',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.wifi),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _urlController,
+              keyboardType: TextInputType.url,
+              decoration: const InputDecoration(
+                labelText: 'Direct PKG URL',
+                hintText: 'http://example.com/game.pkg',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.link),
+              ),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: _pickFile,
+              icon: const Icon(Icons.folder_open),
+              label: Text(_selectedFileName ?? 'Select Local PKG (Optional)'),
+            ),
+            const SizedBox(height: 24),
+            _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : ElevatedButton.icon(
+                    onPressed: _sendToPS4,
+                    icon: const Icon(Icons.send),
+                    label: const Text(
+                      'Install on PS4',
+                      style: TextStyle(fontSize: 18),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+            const SizedBox(height: 30),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.black45,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                _statusMessage,
+                style: const TextStyle(fontSize: 15),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
