@@ -14,7 +14,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'PS4 PKG Installer',
+      title: 'DirectPackageInstaller',
       theme: ThemeData.dark(),
       home: const InstallerScreen(),
     );
@@ -73,21 +73,32 @@ class _InstallerScreenState extends State<InstallerScreen> {
 
     setState(() {
       _isUploading = true;
-      _statusMessage = "جاري الاتصال بالبلايستيشن وبث اللعبة...";
+      _statusMessage = "جاري الاتصال بـ GoldHEN وبث اللعبة...";
     });
 
     try {
       File file = File(_selectedFilePath!);
+      int fileLength = await file.length();
 
       var uri = Uri.parse("http://$ps4Ip:12800/api/install");
-      var request = http.MultipartRequest('POST', uri);
       
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'package',
-          file.path,
-          filename: _selectedFileName,
-        ),
+      // استخدام StreamedRequest لبث الملف تدريجياً بنفس طريقة التطبيق الأصلي
+      var request = http.StreamedRequest('POST', uri);
+      request.headers['Content-Type'] = 'application/octet-stream';
+      request.headers['Content-Length'] = fileLength.toString();
+
+      // فتح البث من ملف الهاتف وإرساله تدريجياً
+      file.openRead().listen(
+        (chunk) {
+          request.sink.add(chunk);
+        },
+        onDone: () {
+          request.sink.close();
+        },
+        onError: (e) {
+          request.sink.addError(e);
+          request.sink.close();
+        },
       );
 
       var streamedResponse = await request.send();
@@ -95,7 +106,7 @@ class _InstallerScreenState extends State<InstallerScreen> {
 
       if (response.statusCode == 200 || response.statusCode == 204) {
         setState(() {
-          _statusMessage = "تم إرسال اللعبة بنجاح! تفقد شاشة الـ PS4";
+          _statusMessage = "تم تثبيت اللعبة بنجاح على البلايستيشن!";
         });
       } else {
         setState(() {
@@ -116,27 +127,22 @@ class _InstallerScreenState extends State<InstallerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('DirectPackageInstaller'),
+        backgroundColor: Colors.deepPurple,
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text(
-                'PS4 PKG Installer',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 20),
               const Icon(
-                Icons.sports_esports,
+                Icons.download_rounded,
                 size: 80,
                 color: Colors.deepPurpleAccent,
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 30),
               TextField(
                 controller: _ipController,
                 decoration: const InputDecoration(
